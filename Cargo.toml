@@ -1,0 +1,10 @@
+[package]
+name = "shabby"
+version = "0.1.0"
+edition = "2024"
+description = "A Telegram userbot for Sharparam"
+repository = "https://github.com/Sharparam/shabby"
+license = "MPL-2.0"
+keywords = ["telegram", "userbot", "bot"]
+
+[dependencies]
