@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+env:
+  RUSTFLAGS: >-
+    --codegen debuginfo=0
+    --deny warnings
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --no-fail-fast --verbose --workspace
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+      - name: rustfmt
+        run: cargo fmt --verbose --check
+      - name: Clippy
+        run: cargo clippy --verbose --workspace -- --deny warnings
