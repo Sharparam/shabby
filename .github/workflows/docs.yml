@@ -42,6 +42,9 @@ jobs:
         run: |
           cp --archive --verbose target/doc _site/doc
           rm --force --verbose _site/doc/.lock
+      - name: Copy site files to deploy folder
+        run: |
+          cp --archive --verbose site/. _site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
   deploy:
