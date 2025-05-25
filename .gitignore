@@ -1,3 +1,7 @@
 target/
 
 /_site/
+
+.env
+
+*.session
