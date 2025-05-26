@@ -2,7 +2,11 @@ use std::{env, io::Write};
 
 use color_eyre::{Result, eyre::WrapErr};
 
-use grammers_client::{Client, Config as GrammersConfig, session::Session};
+use grammers_client::{
+    Client, Config as GrammersConfig,
+    grammers_tl_types::enums::{MessageAction, MessageReplyHeader},
+    session::Session,
+};
 use shabby::logging;
 use tracing::info;
 
@@ -81,6 +85,35 @@ async fn main() -> Result<()> {
     }
 
     info!("Successfully connected and authorized");
+
+    let topic_channel_id = env::var("SHABBY_TG_TOPIC_CHANNEL")
+        .wrap_err("Topic channel ID not set")?
+        .parse::<i64>()
+        .wrap_err("Topic channel ID must be a number")?;
+
+    let mut dialogs = client.iter_dialogs();
+
+    while let Some(dialog) = dialogs.next().await? {
+        let chat = dialog.chat();
+        let id = chat.id();
+        if id == topic_channel_id {
+            println!("{} ({})", chat.name(), chat.id());
+            let mut messages = client.iter_messages(chat);
+
+            while let Some(message) = messages.next().await? {
+                if let Some(MessageAction::TopicCreate(topic)) = message.action() {
+                    println!("[{}] <topic> {}", message.id(), topic.title);
+                }
+                if message.pinned() {
+                    if let Some(MessageReplyHeader::Header(header)) = &message.raw.reply_to {
+                        if header.forum_topic {
+                            println!("[{}] <topic pin> {}", message.id(), message.text());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(())
 }
