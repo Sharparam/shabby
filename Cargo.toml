@@ -12,3 +12,6 @@ color-eyre = "0.6.4"
 grammers-client = "0.7.0"
 thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["full"] }
+tracing = "0.1.41"
+tracing-log = "0.2.0"
+tracing-subscriber = "0.3.19"

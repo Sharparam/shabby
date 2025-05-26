@@ -3,6 +3,8 @@ use std::{env, io::Write};
 use color_eyre::{Result, eyre::WrapErr};
 
 use grammers_client::{Client, Config as GrammersConfig, session::Session};
+use shabby::logging;
+use tracing::info;
 
 const SESSION_FILENAME: &str = "shabby.session";
 
@@ -12,6 +14,10 @@ const SESSION_FILENAME: &str = "shabby.session";
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
+    let _log_state =
+        logging::init(logging::LogLevel::default()).wrap_err("Failed to init logging")?;
+
+    info!("Initializing");
 
     let api_id = get_from_env_or_stdin("SHABBY_TG_API_ID")?;
     let api_hash = get_from_env_or_stdin("SHABBY_TG_API_HASH")?;
@@ -32,7 +38,7 @@ async fn main() -> Result<()> {
         .await
         .wrap_err("Failed to check authorization")?
     {
-        println!("Requesting token SMS");
+        info!("Requesting token SMS");
         let token = client
             .request_login_code(&phone_number)
             .await
@@ -67,14 +73,14 @@ async fn main() -> Result<()> {
             }
         };
 
-        println!(
+        info!(
             "Successfully signed in as {} (ID: {})",
             user.username().unwrap_or("<no username>"),
             user.id()
         );
     }
 
-    println!("Successfully connected and authorized");
+    info!("Successfully connected and authorized");
 
     Ok(())
 }
