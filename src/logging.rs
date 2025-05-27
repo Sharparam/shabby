@@ -5,16 +5,11 @@ use color_eyre::{
     eyre::{WrapErr, eyre},
 };
 use tracing::metadata::LevelFilter;
-use tracing_subscriber::{
-    Layer, Registry,
-    layer::{Layered, SubscriberExt},
-    reload,
-    util::SubscriberInitExt,
-};
+use tracing_subscriber::{Layer, Registry, layer::SubscriberExt, reload, util::SubscriberInitExt};
 
 mod compat;
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub enum LogLevel {
     Off,
 
@@ -34,9 +29,8 @@ pub enum LogLevel {
 #[must_use]
 pub struct LogState {
     level_filter_reload_handle: reload::Handle<LevelFilter, Registry>,
-
-    level_filter_others_reload_handle:
-        reload::Handle<LevelFilter, Layered<Box<dyn Layer<Registry> + Send + Sync>, Registry>>,
+    // level_filter_others_reload_handle:
+    //     reload::Handle<LevelFilter, Layered<Box<dyn Layer<Registry> + Send + Sync>, Registry>>,
 }
 
 impl LogState {
@@ -46,13 +40,13 @@ impl LogState {
     {
         let log_level = level.into();
         let level_filter = LevelFilter::from(log_level);
-        let level_filter_others = LevelFilter::from(map_other_log_level(log_level));
+        // let level_filter_others = LevelFilter::from(map_other_log_level(log_level));
         self.level_filter_reload_handle
             .modify(|f| *f = level_filter)
-            .wrap_err("Failed to modify log level filter")?;
-        self.level_filter_others_reload_handle
-            .modify(|f| *f = level_filter_others)
-            .wrap_err("Failed to modify other log level filter")
+            .wrap_err("Failed to modify log level filter")
+        // self.level_filter_others_reload_handle
+        //     .modify(|f| *f = level_filter_others)
+        //     .wrap_err("Failed to modify other log level filter")
     }
 }
 
@@ -67,8 +61,8 @@ where
     let (level_filter, level_filter_reload_handle) = reload::Layer::new(level_filter);
 
     let level_filter_others = LevelFilter::from(log_level_others);
-    let (level_filter_others, level_filter_others_reload_handle) =
-        reload::Layer::new(level_filter_others);
+    // let (level_filter_others, level_filter_others_reload_handle) =
+    //     reload::Layer::new(level_filter_others);
 
     let others_layer = tracing_subscriber::fmt::layer()
         .with_writer(io::stderr)
@@ -107,13 +101,16 @@ where
 
     Ok(LogState {
         level_filter_reload_handle,
-        level_filter_others_reload_handle,
+        // level_filter_others_reload_handle,
     })
 }
 
 fn map_other_log_level(level: LogLevel) -> LogLevel {
     match level {
+        #[cfg(debug_assertions)]
         LogLevel::Trace | LogLevel::Debug | LogLevel::Info => LogLevel::Warn,
+        #[cfg(not(debug_assertions))]
+        LogLevel::Trace | LogLevel::Debug | LogLevel::Info | LogLevel::Warn => LogLevel::Error,
         _ => level,
     }
 }
