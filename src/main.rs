@@ -21,7 +21,9 @@ async fn main() -> Result<()> {
     let _log_state =
         logging::init(logging::LogLevel::default()).wrap_err("Failed to init logging")?;
 
-    info!("Initializing");
+    let cwd = env::current_dir().wrap_err("Failed to get current working directory")?;
+
+    info!("Initializing in {}", cwd.display());
 
     let api_id = get_from_env_or_stdin("SHABBY_TG_API_ID")?;
     let api_hash = get_from_env_or_stdin("SHABBY_TG_API_HASH")?;
