@@ -5,3 +5,6 @@ target/
 .env
 
 *.session
+
+# Ignore Nix build result
+/result
