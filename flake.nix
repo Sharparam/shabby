@@ -16,7 +16,9 @@
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [(import rust-overlay)];
       pkgs = (import nixpkgs) {inherit system overlays;};
-      toolchain = pkgs.rust-bin.stable.latest.default;
+      toolchain = pkgs.rust-bin.stable.latest.default.override {
+        extensions = ["rust-src"];
+      };
       nativeBuildInputs = with pkgs; [
         toolchain
       ];
