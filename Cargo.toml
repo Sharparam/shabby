@@ -8,6 +8,7 @@ license = "MPL-2.0"
 keywords = ["telegram", "userbot", "bot"]
 
 [dependencies]
+clap = { version = "4.5.39", features = ["derive", "env", "wrap_help"] }
 color-eyre = "0.6.4"
 grammers-client = "0.7.0"
 thiserror = "2.0.12"
