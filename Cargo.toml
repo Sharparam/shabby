@@ -11,6 +11,7 @@ keywords = ["telegram", "userbot", "bot"]
 clap = { version = "4.5.39", features = ["derive", "env", "wrap_help"] }
 color-eyre = "0.6.4"
 grammers-client = "0.7.0"
+indoc = "2.0.6"
 thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["full"] }
 tracing = "0.1.41"

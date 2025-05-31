@@ -2,6 +2,10 @@ use clap::Parser;
 
 use crate::logging::LogLevel;
 
+use self::verbose::Verbosity;
+
+mod verbose;
+
 const ENV_LOG_LEVEL: &str = "SHABBY_LOG_LEVEL";
 const ENV_API_ID: &str = "SHABBY_TG_API_ID";
 const ENV_API_HASH: &str = "SHABBY_TG_API_HASH";
@@ -10,11 +14,20 @@ const ENV_PHONE_NUMBER: &str = "SHABBY_TG_PHONE_NUMBER";
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
+    #[command(flatten)]
+    pub verbose: Verbosity,
+
     /// Specifies desired logging level.
     ///
-    /// If this option is specified, the verbosity and (-v) and quiet (-q) flags
-    /// will be ignored.
-    #[arg(short, long, env = ENV_LOG_LEVEL, alias = "log-level", global = true)]
+    /// Cannot be combined with `--verbose` or `--quiet`.
+    #[arg(
+        short,
+        long,
+        env = ENV_LOG_LEVEL,
+        alias = "log-level",
+        global = true,
+        group = "verbosity",
+    )]
     pub log_level: Option<LogLevel>,
 
     /// Specifies the API ID for Telegram.
@@ -51,6 +64,9 @@ impl Cli {
             return Some(ll);
         }
 
-        None
+        match self.verbose.is_present() {
+            true => Some(self.verbose.level()),
+            false => None,
+        }
     }
 }

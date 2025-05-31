@@ -1,30 +1,13 @@
-use std::{fmt::Display, io, str::FromStr};
+use std::io;
 
-use color_eyre::{
-    Result,
-    eyre::{WrapErr, eyre},
-};
+use color_eyre::{Result, eyre::WrapErr};
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::{Layer, Registry, layer::SubscriberExt, reload, util::SubscriberInitExt};
 
+pub use self::level::LogLevel;
+
 mod compat;
-
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
-pub enum LogLevel {
-    Off,
-
-    Error,
-
-    Warn,
-
-    #[cfg_attr(not(debug_assertions), default)]
-    Info,
-
-    #[cfg_attr(debug_assertions, default)]
-    Debug,
-
-    Trace,
-}
+mod level;
 
 #[must_use]
 pub struct LogState {
@@ -112,70 +95,5 @@ fn map_other_log_level(level: LogLevel) -> LogLevel {
         #[cfg(not(debug_assertions))]
         LogLevel::Trace | LogLevel::Debug | LogLevel::Info | LogLevel::Warn => LogLevel::Error,
         _ => level,
-    }
-}
-
-impl Display for LogLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use LogLevel::*;
-
-        let level = match self {
-            Off => "OFF",
-            Error => "ERROR",
-            Warn => "WARN",
-            Info => "INFO",
-            Debug => "DEBUG",
-            Trace => "TRACE",
-        };
-
-        f.write_str(level)
-    }
-}
-
-impl FromStr for LogLevel {
-    type Err = color_eyre::Report;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use LogLevel::*;
-
-        s.parse::<usize>()
-            .ok()
-            .and_then(|n| match n {
-                0 => Some(Off),
-                1 => Some(Error),
-                2 => Some(Warn),
-                3 => Some(Info),
-                4 => Some(Debug),
-                5 => Some(Trace),
-                _ => None,
-            })
-            .or_else(|| match s {
-                "" => Some(Default::default()),
-                s if s.eq_ignore_ascii_case("e") => Some(Error),
-                s if s.eq_ignore_ascii_case("err") => Some(Error),
-                s if s.eq_ignore_ascii_case("error") => Some(Error),
-                s if s.eq_ignore_ascii_case("w") => Some(Warn),
-                s if s.eq_ignore_ascii_case("warn") => Some(Warn),
-                s if s.eq_ignore_ascii_case("warning") => Some(Warn),
-                s if s.eq_ignore_ascii_case("i") => Some(Info),
-                s if s.eq_ignore_ascii_case("inf") => Some(Info),
-                s if s.eq_ignore_ascii_case("info") => Some(Info),
-                s if s.eq_ignore_ascii_case("information") => Some(Info),
-                s if s.eq_ignore_ascii_case("d") => Some(Debug),
-                s if s.eq_ignore_ascii_case("dbg") => Some(Debug),
-                s if s.eq_ignore_ascii_case("debug") => Some(Debug),
-                s if s.eq_ignore_ascii_case("t") => Some(Trace),
-                s if s.eq_ignore_ascii_case("trace") => Some(Trace),
-                s if s.eq_ignore_ascii_case("v") => Some(Trace),
-                s if s.eq_ignore_ascii_case("verbose") => Some(Trace),
-                s if s.eq_ignore_ascii_case("o") => Some(Off),
-                s if s.eq_ignore_ascii_case("off") => Some(Off),
-                s if s.eq_ignore_ascii_case("disable") => Some(Off),
-                s if s.eq_ignore_ascii_case("disabled") => Some(Off),
-                s if s.eq_ignore_ascii_case("no") => Some(Off),
-                s if s.eq_ignore_ascii_case("none") => Some(Off),
-                _ => None,
-            })
-            .ok_or(eyre!("Invalid log level: {}", s))
     }
 }
