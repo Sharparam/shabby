@@ -1,10 +1,7 @@
 use std::{env, io::Write};
 
 use clap::Parser;
-use color_eyre::{
-    Result,
-    eyre::{OptionExt, WrapErr},
-};
+use color_eyre::{Result, eyre::WrapErr};
 use grammers_client::{
     Client, Config as GrammersConfig, InputMessage, Update,
     grammers_tl_types::types::MessageMediaDice,
@@ -14,13 +11,11 @@ use grammers_client::{
 use tokio::signal;
 use tracing::{error, info, warn};
 
-use self::{cli::Cli, logging::LogState};
+use self::{cli::Cli, config::Config, logging::LogState};
 
 pub mod cli;
 pub mod config;
 pub mod logging;
-
-const SESSION_FILENAME: &str = "shabby.session";
 
 pub async fn run() -> Result<LogState> {
     let cli = Cli::try_parse()?;
@@ -31,15 +26,15 @@ pub async fn run() -> Result<LogState> {
 
     info!("Initializing in {}", cwd.display());
 
-    let api_id = cli.api_id.ok_or_eyre("API ID not provided")?;
-    let api_hash = cli.api_hash.ok_or_eyre("API hash not provided")?;
-    let phone_number = cli.phone_number.ok_or_eyre("Phone number not provided")?;
+    let config = Config::from_cli(&cli)?;
+    let session_path = config.session_filename();
+    let session =
+        Session::load_file_or_create(session_path).wrap_err("Failed to load or create session")?;
 
     let client = Client::connect(GrammersConfig {
-        api_id,
-        api_hash,
-        session: Session::load_file_or_create(SESSION_FILENAME)
-            .wrap_err("Failed to load or create session")?,
+        api_id: config.api_id(),
+        api_hash: config.api_hash().to_string(),
+        session,
         params: Default::default(),
     })
     .await
@@ -52,7 +47,7 @@ pub async fn run() -> Result<LogState> {
     {
         info!("Requesting token SMS");
         let token = client
-            .request_login_code(&phone_number)
+            .request_login_code(config.phone_number())
             .await
             .wrap_err("Failed to request login code")?;
 
@@ -71,7 +66,7 @@ pub async fn run() -> Result<LogState> {
             Ok(user) => {
                 if let Err(err) = client
                     .session()
-                    .save_to_file(SESSION_FILENAME)
+                    .save_to_file(config.session_filename())
                     .wrap_err("Failed to save session")
                 {
                     client.sign_out().await.wrap_err("Failed to sign out")?;
@@ -113,7 +108,7 @@ pub async fn run() -> Result<LogState> {
     info!("Saving session file and exiting");
     client
         .session()
-        .save_to_file(SESSION_FILENAME)
+        .save_to_file(config.session_filename())
         .wrap_err("Failed to save session on exit")?;
 
     Ok(log_state)
