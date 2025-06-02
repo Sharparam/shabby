@@ -31,6 +31,8 @@ pub async fn run() -> Result<LogState> {
     let session =
         Session::load_file_or_create(session_path).wrap_err("Failed to load or create session")?;
 
+    info!("Using session file: {}", session_path.display());
+
     let client = Client::connect(GrammersConfig {
         api_id: config.api_id(),
         api_hash: config.api_hash().to_string(),

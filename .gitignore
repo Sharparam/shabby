@@ -4,6 +4,8 @@ target/
 
 .env
 
+# Ignore session and config files
+shabby.kdl
 *.session
 
 # Ignore Nix build result

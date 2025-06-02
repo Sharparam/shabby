@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 use crate::logging::LogLevel;
@@ -7,6 +9,7 @@ use self::verbose::Verbosity;
 mod verbose;
 
 const ENV_LOG_LEVEL: &str = "SHABBY_LOG_LEVEL";
+const ENV_CONFIG: &str = "SHABBY_CONFIG";
 const ENV_API_ID: &str = "SHABBY_TG_API_ID";
 const ENV_API_HASH: &str = "SHABBY_TG_API_HASH";
 const ENV_PHONE_NUMBER: &str = "SHABBY_TG_PHONE_NUMBER";
@@ -29,6 +32,15 @@ pub struct Cli {
         group = "verbosity",
     )]
     pub log_level: Option<LogLevel>,
+
+    /// Specifies the path to the configuration file.
+    #[arg(
+        short,
+        long,
+        env = ENV_CONFIG,
+        global = true
+    )]
+    pub config: Option<PathBuf>,
 
     /// Specifies the API ID for Telegram.
     #[arg(
