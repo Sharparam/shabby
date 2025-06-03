@@ -80,8 +80,12 @@ impl Config {
             phone_number = Some(cli_phone_number.to_string());
         }
 
+        if let Some(cli_session) = &cli.session {
+            session_filename = Some(cli_session.to_path_buf());
+        }
+
         if session_filename.is_none() {
-            info!("No session filename provided in config, using default state location");
+            info!("No session filename provided in config or CLI, using default state location");
             let xdg_session = dirs::state()?.join("session");
 
             session_filename = Some(xdg_session);

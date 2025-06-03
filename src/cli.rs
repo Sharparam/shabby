@@ -13,6 +13,7 @@ const ENV_CONFIG: &str = "SHABBY_CONFIG";
 const ENV_API_ID: &str = "SHABBY_TG_API_ID";
 const ENV_API_HASH: &str = "SHABBY_TG_API_HASH";
 const ENV_PHONE_NUMBER: &str = "SHABBY_TG_PHONE_NUMBER";
+const ENV_SESSION: &str = "SHABBY_SESSION";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -68,6 +69,10 @@ pub struct Cli {
         global = true,
     )]
     pub phone_number: Option<String>,
+
+    /// Specifies the path to the session file.
+    #[arg(short, long, env = ENV_SESSION, global = true)]
+    pub session: Option<PathBuf>,
 }
 
 impl Cli {
