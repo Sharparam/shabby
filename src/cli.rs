@@ -45,6 +45,7 @@ pub struct Cli {
 
     /// Specifies the API ID for Telegram.
     #[arg(
+        short = 'i',
         long,
         env = ENV_API_ID,
         alias = "api-id",
@@ -54,6 +55,7 @@ pub struct Cli {
 
     /// Specifies the API hash for Telegram.
     #[arg(
+        short = 'H',
         long,
         env = ENV_API_HASH,
         alias = "api-hash",
@@ -63,6 +65,7 @@ pub struct Cli {
 
     /// Specifies the phone number for Telegram login.
     #[arg(
+        short,
         long,
         env = ENV_PHONE_NUMBER,
         alias = "phone-number",
