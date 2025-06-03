@@ -15,6 +15,7 @@ use self::{cli::Cli, config::Config, logging::LogState};
 
 pub mod cli;
 pub mod config;
+mod dirs;
 pub mod logging;
 
 pub async fn run() -> Result<LogState> {

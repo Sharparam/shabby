@@ -3,11 +3,9 @@ use std::{path::PathBuf, str::FromStr};
 use color_eyre::{Result, eyre::OptionExt};
 use kdl::{KdlDocument, KdlError};
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
-use crate::cli::Cli;
-
-const DEFAULT_SESSION_FILENAME: &str = "shabby.session";
+use crate::{cli::Cli, dirs};
 
 #[derive(Debug)]
 pub struct Config {
@@ -45,8 +43,22 @@ impl Config {
         let mut phone_number: Option<String> = None;
         let mut session_filename: Option<PathBuf> = None;
 
-        if let Some(config_path) = &cli.config {
-            config_file = Some(ConfigFile::load_file(config_path)?);
+        let mut config_path: Option<PathBuf> = None;
+
+        if let Some(cli_config_path) = &cli.config {
+            debug!("Config file specified in CLI");
+            config_path = Some(cli_config_path.to_path_buf());
+        } else {
+            info!("No config file specified in CLI, trying default location");
+            let default_config_path = dirs::config()?.join("config.kdl");
+            if default_config_path.exists() {
+                info!("Found default config");
+                config_path = Some(default_config_path);
+            }
+        }
+
+        if let Some(config_path) = config_path {
+            config_file = Some(ConfigFile::load_file(&config_path)?);
         }
 
         if let Some(config_file) = config_file {
@@ -68,12 +80,18 @@ impl Config {
             phone_number = Some(cli_phone_number.to_string());
         }
 
+        if session_filename.is_none() {
+            info!("No session filename provided in config, using default state location");
+            let xdg_session = dirs::state()?.join("session");
+
+            session_filename = Some(xdg_session);
+        }
+
         Ok(Self {
             api_id: api_id.ok_or_eyre("API ID not provided")?,
             api_hash: api_hash.ok_or_eyre("API hash not provided")?,
             phone_number: phone_number.ok_or_eyre("Phone number not provided")?,
-            session_filename: session_filename
-                .unwrap_or_else(|| PathBuf::from(DEFAULT_SESSION_FILENAME)),
+            session_filename: session_filename.unwrap(),
         })
     }
 
