@@ -28,7 +28,6 @@ pub struct Cli {
         short,
         long,
         env = ENV_LOG_LEVEL,
-        alias = "log-level",
         global = true,
         group = "verbosity",
     )]
@@ -48,7 +47,6 @@ pub struct Cli {
         short = 'i',
         long,
         env = ENV_API_ID,
-        alias = "api-id",
         global = true,
     )]
     pub api_id: Option<i32>,
@@ -58,7 +56,6 @@ pub struct Cli {
         short = 'H',
         long,
         env = ENV_API_HASH,
-        alias = "api-hash",
         global = true,
     )]
     pub api_hash: Option<String>,
@@ -68,7 +65,6 @@ pub struct Cli {
         short,
         long,
         env = ENV_PHONE_NUMBER,
-        alias = "phone-number",
         global = true,
     )]
     pub phone_number: Option<String>,
