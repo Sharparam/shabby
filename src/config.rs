@@ -5,10 +5,11 @@ use kdl::{KdlDocument, KdlError};
 use thiserror::Error;
 use tracing::{debug, error, info};
 
-use crate::{cli::Cli, dirs};
+use crate::{cli::Cli, dirs, logging::LogLevel};
 
 #[derive(Debug)]
 pub struct Config {
+    log_level: Option<LogLevel>,
     api_id: i32,
     api_hash: String,
     phone_number: String,
@@ -17,6 +18,7 @@ pub struct Config {
 
 #[derive(Debug, Default)]
 struct ConfigFile {
+    pub log_level: Option<LogLevel>,
     pub api_id: Option<i32>,
     pub api_hash: Option<String>,
     pub phone_number: Option<String>,
@@ -37,6 +39,7 @@ enum ConfigFileError {
 
 impl Config {
     pub fn from_cli(cli: &Cli) -> Result<Self> {
+        let mut log_level: Option<LogLevel> = None;
         let mut config_file: Option<ConfigFile> = None;
         let mut api_id: Option<i32> = None;
         let mut api_hash: Option<String> = None;
@@ -49,10 +52,10 @@ impl Config {
             debug!("Config file specified in CLI");
             config_path = Some(cli_config_path.to_path_buf());
         } else {
-            info!("No config file specified in CLI, trying default location");
+            debug!("No config file specified in CLI, trying default location");
             let default_config_path = dirs::config()?.join("config.kdl");
             if default_config_path.exists() {
-                info!("Found default config");
+                debug!("Found default config");
                 config_path = Some(default_config_path);
             }
         }
@@ -62,10 +65,15 @@ impl Config {
         }
 
         if let Some(config_file) = config_file {
+            log_level = config_file.log_level;
             api_id = config_file.api_id;
             api_hash = config_file.api_hash;
             phone_number = config_file.phone_number;
             session_filename = config_file.session_filename;
+        }
+
+        if let Some(cli_log_level) = cli.log_level() {
+            log_level = Some(cli_log_level);
         }
 
         if let Some(cli_api_id) = cli.api_id {
@@ -85,18 +93,23 @@ impl Config {
         }
 
         if session_filename.is_none() {
-            info!("No session filename provided in config or CLI, using default state location");
+            debug!("No session filename provided in config or CLI, using default state location");
             let xdg_session = dirs::state()?.join("session");
 
             session_filename = Some(xdg_session);
         }
 
         Ok(Self {
+            log_level,
             api_id: api_id.ok_or_eyre("API ID not provided")?,
             api_hash: api_hash.ok_or_eyre("API hash not provided")?,
             phone_number: phone_number.ok_or_eyre("Phone number not provided")?,
             session_filename: session_filename.unwrap(),
         })
+    }
+
+    pub fn log_level(&self) -> Option<LogLevel> {
+        self.log_level
     }
 
     pub fn api_id(&self) -> i32 {
@@ -131,12 +144,31 @@ impl FromStr for ConfigFile {
         let mut config = ConfigFile::default();
         let doc: KdlDocument = s.parse()?;
 
+        if let Some(log_level) = doc.get_arg("log_level") {
+            if let Some(num_level) = log_level.as_integer() {
+                let level = num_level.into();
+                debug!(%level, "Parsed integer log level from config file");
+                config.log_level = Some(level);
+            } else if let Some(str_level) = log_level.as_string() {
+                if let Ok(level) = str_level.parse::<LogLevel>() {
+                    debug!(%level, "Parsed string log level from config file");
+                    config.log_level = Some(level);
+                } else {
+                    error!("Log level key present in config but value is invalid");
+                    return Err(ConfigFileError::InvalidValue);
+                }
+            } else {
+                error!("Log level key present in config but value is missing or invalid");
+                return Err(ConfigFileError::InvalidValue);
+            }
+        }
+
         if let Some(telegram) = doc.get("telegram") {
             if let Some(children) = telegram.children() {
                 if let Some(api_id) = children.get_arg("api_id") {
                     match api_id.as_integer() {
                         Some(id) if id >= i32::MIN as i128 && id <= i32::MAX as i128 => {
-                            info!("Parsed valid API ID from config file");
+                            debug!("Parsed valid API ID from config file");
                             config.api_id = Some(id as i32);
                         }
                         _ => {
@@ -148,7 +180,7 @@ impl FromStr for ConfigFile {
 
                 if let Some(api_hash) = children.get_arg("api_hash") {
                     if let Some(hash) = api_hash.as_string() {
-                        info!("Parsed API hash from config file");
+                        debug!("Parsed API hash from config file");
                         config.api_hash = Some(hash.to_string());
                     } else {
                         error!("API hash key present in config but value is missing or invalid");
@@ -158,7 +190,7 @@ impl FromStr for ConfigFile {
 
                 if let Some(phone_number) = children.get_arg("phone_number") {
                     if let Some(phone) = phone_number.as_string() {
-                        info!("Parsed phone number from config file");
+                        debug!("Parsed phone number from config file");
                         config.phone_number = Some(phone.to_string());
                     } else {
                         error!(
@@ -170,7 +202,7 @@ impl FromStr for ConfigFile {
 
                 if let Some(session_filename) = children.get_arg("session_filename") {
                     if let Some(filename) = session_filename.as_string() {
-                        info!("Parsed session filename from config file");
+                        debug!("Parsed session filename from config file");
                         config.session_filename = Some(PathBuf::from(filename));
                     } else {
                         error!(

@@ -20,14 +20,16 @@ pub mod logging;
 
 pub async fn run() -> Result<LogState> {
     let cli = Cli::try_parse()?;
-    let log_level = cli.log_level();
-    let log_state = logging::init(log_level.unwrap_or_default())?;
+    let log_state = logging::init(cli.log_level().unwrap_or_default())?;
 
     let cwd = env::current_dir().wrap_err("Failed to get current working directory")?;
 
-    info!("Initializing in {}", cwd.display());
+    info!(cwd = %cwd.display(), "Initializing");
 
     let config = Config::from_cli(&cli)?;
+    if let Some(config_log_level) = config.log_level() {
+        log_state.set_level_filter(config_log_level)?;
+    }
     let session_path = config.session_filename();
     let session =
         Session::load_file_or_create(session_path).wrap_err("Failed to load or create session")?;

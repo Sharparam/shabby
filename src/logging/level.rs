@@ -52,15 +52,22 @@ impl From<i8> for LogLevel {
 
 impl From<i16> for LogLevel {
     fn from(value: i16) -> Self {
+        let value = value as i128;
+        value.into()
+    }
+}
+
+impl From<i128> for LogLevel {
+    fn from(value: i128) -> Self {
         use LogLevel::*;
 
         match value {
-            i16::MIN..=0 => Off,
+            i128::MIN..=0 => Off,
             1 => Error,
             2 => Warn,
             3 => Info,
             4 => Debug,
-            5..=i16::MAX => Trace,
+            5..=i128::MAX => Trace,
         }
     }
 }
@@ -86,7 +93,7 @@ impl FromStr for LogLevel {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use LogLevel::*;
 
-        s.parse::<i16>()
+        s.parse::<i128>()
             .ok()
             .map(|n| n.into())
             .or_else(|| match s {
