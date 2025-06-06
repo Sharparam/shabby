@@ -13,11 +13,11 @@ use tracing::{error, info};
 
 use self::{cli::Cli, config::Config, logging::LogState};
 
-pub mod cli;
+mod cli;
 mod command;
-pub mod config;
+mod config;
 mod dirs;
-pub mod logging;
+mod logging;
 
 struct Bot {
     client: Client,

@@ -39,6 +39,7 @@ pub struct Verbosity<L: VerbosityLevel = DefaultLevel> {
 }
 
 impl<L: VerbosityLevel> Verbosity<L> {
+    #[allow(dead_code)]
     pub fn new(verbose: u8, quiet: u8) -> Self {
         Self {
             verbose,
@@ -51,6 +52,7 @@ impl<L: VerbosityLevel> Verbosity<L> {
         self.verbose != 0 || self.quiet != 0
     }
 
+    #[allow(dead_code)]
     pub fn is_silent(&self) -> bool {
         self.level() == LogLevel::Off
     }
