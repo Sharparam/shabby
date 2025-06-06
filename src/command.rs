@@ -156,11 +156,11 @@ pub async fn parse_chat_command(context: &Context) -> Result<ActionResult, BotCo
         BotAction::Quit => Ok(ActionResult::quit(true)),
         BotAction::Ping => Ok(ActionResult::reply("Pong!".into())),
         BotAction::MsgId => Ok(ActionResult::edit(InputMessage::markdown(format!(
-            "`{}`",
+            "Message ID: `{}`",
             context.message.id()
         )))),
         BotAction::ChatId => Ok(ActionResult::edit(InputMessage::markdown(format!(
-            "`{}`",
+            "Chat ID: `{}`",
             context.chat.id()
         )))),
         BotAction::Case(args) => {
