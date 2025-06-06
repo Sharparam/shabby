@@ -9,9 +9,9 @@ use grammers_client::{
     types::{Chat, Media, Message, User, media::Dice},
 };
 use tokio::signal;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
-use self::{cli::Cli, command::BotAction, config::Config, logging::LogState};
+use self::{cli::Cli, config::Config, logging::LogState};
 
 pub mod cli;
 mod command;
@@ -22,6 +22,11 @@ pub mod logging;
 struct Bot {
     client: Client,
     me: User,
+}
+
+struct Context {
+    chat: Chat,
+    message: Message,
 }
 
 pub async fn run() -> Result<LogState> {
@@ -163,21 +168,44 @@ async fn handle_updates(bot: &Bot) -> Result<()> {
     Ok(())
 }
 
-async fn handle_command(text: &str, message: Message) -> Result<bool> {
-    let command = command::parse_chat_command(text).wrap_err("Failed to parse chat command")?;
+async fn handle_command(context: &Context) -> Result<bool> {
+    let result = command::parse_chat_command(context).wrap_err("Failed to parse chat command")?;
 
-    match command.action {
-        BotAction::Quit => {
-            info!("Received quit command");
-            if let Err(err) = message.delete().await {
-                warn!("Failed to delete quit command message: {}", err);
+    match result.response {
+        Some(command::ActionResponse::Delete) => {
+            if let Err(err) = context.message.delete().await {
+                error!(?err, "Failed to delete command message");
             }
-            Ok(true)
         }
-    }
+        Some(command::ActionResponse::Edit(new_message)) => {
+            if let Err(err) = context.message.edit(new_message).await {
+                error!(?err, "Failed to edit command message");
+            }
+        }
+        Some(command::ActionResponse::Reply(response)) => {
+            if let Err(err) = context.message.reply(response).await {
+                error!(?err, "Failed to reply to command message");
+            }
+        }
+        None => {}
+    };
+
+    Ok(result.quit)
+
+    // match command.action {
+    //     BotAction::Quit => {
+    //         info!("Received quit command");
+    //         if let Err(err) = message.delete().await {
+    //             warn!("Failed to delete quit command message: {}", err);
+    //         }
+    //         Ok(true)
+    //     }
+    // }
 }
 
-async fn handle_message(bot: &Bot, chat: &Chat, message: Message) -> Result<bool> {
+async fn handle_message(bot: &Bot, context: &Context) -> Result<bool> {
+    let message = &context.message;
+
     if let Some(Media::Dice(ref dice)) = message.media() {
         if dice.raw.value != 6 {
             let reply_to = message.reply_to_message_id();
@@ -196,7 +224,7 @@ async fn handle_message(bot: &Bot, chat: &Chat, message: Message) -> Result<bool
                 .copy_media(&dice_media)
                 .silent(true);
 
-            bot.client.send_message(chat, dice_msg).await?;
+            bot.client.send_message(&context.chat, dice_msg).await?;
             return Ok(false);
         }
     }
@@ -208,15 +236,24 @@ async fn handle_update(bot: &Bot, update: Update) -> Result<bool> {
     match update {
         // Because we're making a userbot, we only care about messages sent by ourselves
         Update::NewMessage(message) if message.sender().is_some_and(|s| s.id() == bot.me.id()) => {
-            let chat = message.chat();
             let text = message.text().trim();
 
+            let context = Context {
+                chat: message.chat(),
+                message: message.clone(),
+            };
+
             if text.starts_with('!') {
-                match handle_command(text, message.clone()).await {
+                match handle_command(&context).await {
                     Err(err) => {
                         if let Some(clap_err) = err.root_cause().downcast_ref::<clap::Error>() {
                             let formatted = clap_err.to_string();
-                            message.reply(formatted).await?;
+                            if context.chat.id() == bot.me.id() {
+                                message.reply(formatted).await?;
+                            } else {
+                                message.delete().await?;
+                                bot.client.send_message(&bot.me, formatted).await?;
+                            }
                             Ok(false)
                         } else {
                             Err(err)
@@ -225,7 +262,7 @@ async fn handle_update(bot: &Bot, update: Update) -> Result<bool> {
                     res => res,
                 }
             } else {
-                handle_message(bot, &chat, message).await
+                handle_message(bot, &context).await
             }
 
             // info!(

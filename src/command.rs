@@ -1,5 +1,8 @@
 use clap::{Parser, Subcommand};
 use color_eyre::Result;
+use grammers_client::InputMessage;
+
+use crate::Context;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -10,8 +13,24 @@ pub struct BotCommand {
 
 #[derive(Subcommand, Debug)]
 pub enum BotAction {
-    #[command(name = "quit")]
     Quit,
+
+    Ping,
+
+    MsgId,
+
+    ChatId,
+}
+
+pub enum ActionResponse {
+    Delete,
+    Edit(InputMessage),
+    Reply(InputMessage),
+}
+
+pub struct ActionResult {
+    pub quit: bool,
+    pub response: Option<ActionResponse>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -26,7 +45,9 @@ pub enum BotCommandError {
     Clap(#[from] clap::Error),
 }
 
-pub fn parse_chat_command(text: &str) -> Result<BotCommand, BotCommandError> {
+pub fn parse_chat_command(context: &Context) -> Result<ActionResult, BotCommandError> {
+    let text = context.message.text().trim();
+
     if !text.starts_with('!') {
         return Err(BotCommandError::MissingPrefix);
     }
@@ -37,5 +58,43 @@ pub fn parse_chat_command(text: &str) -> Result<BotCommand, BotCommandError> {
     split.insert(0, "!".to_string());
     let command = BotCommand::try_parse_from(split)?;
 
-    Ok(command)
+    match command.action {
+        BotAction::Quit => Ok(ActionResult::quit(true)),
+        BotAction::Ping => Ok(ActionResult::reply("Pong!".into())),
+        BotAction::MsgId => Ok(ActionResult::edit(InputMessage::markdown(format!(
+            "`{}`",
+            context.message.id()
+        )))),
+        BotAction::ChatId => Ok(ActionResult::edit(InputMessage::markdown(format!(
+            "`{}`",
+            context.chat.id()
+        )))),
+    }
+}
+
+impl ActionResult {
+    pub fn quit(delete: bool) -> Self {
+        Self {
+            quit: true,
+            response: if delete {
+                Some(ActionResponse::Delete)
+            } else {
+                None
+            },
+        }
+    }
+
+    pub fn edit(new_message: InputMessage) -> Self {
+        Self {
+            quit: false,
+            response: Some(ActionResponse::Edit(new_message)),
+        }
+    }
+
+    pub fn reply(response: InputMessage) -> Self {
+        Self {
+            quit: false,
+            response: Some(ActionResponse::Reply(response)),
+        }
+    }
 }
