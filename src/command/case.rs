@@ -83,8 +83,10 @@ pub struct CaseArgs {
 }
 
 impl CaseArgs {
-    pub fn handle(&self) -> Result<ActionResult, BotCommandError> {
-        let text = self.text.join(" ");
+    pub fn handle(&self, text: Option<&str>) -> Result<ActionResult, BotCommandError> {
+        let text = text
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| self.text.join(" "));
         let transformed_text = self.mode.transform(&text);
         Ok(ActionResult::edit(transformed_text.into()))
     }

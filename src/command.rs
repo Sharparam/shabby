@@ -86,13 +86,13 @@ pub async fn parse_chat_command(context: &Context) -> Result<ActionResult, BotCo
             context.chat.id()
         )))),
         BotAction::Case(args) => {
-            if let Some(reply_to) = context.message.get_reply().await? {
-                let reply_text = reply_to.text();
-                let transformed_text = args.mode.transform(reply_text);
-                Ok(ActionResult::edit(transformed_text.into()))
-            } else {
-                args.handle()
-            }
+            let reply = context
+                .message
+                .get_reply()
+                .await?
+                .map(|m| m.text().to_string());
+
+            args.handle(reply.as_deref())
         }
     }
 }
