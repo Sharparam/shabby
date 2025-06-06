@@ -169,7 +169,9 @@ async fn handle_updates(bot: &Bot) -> Result<()> {
 }
 
 async fn handle_command(context: &Context) -> Result<bool> {
-    let result = command::parse_chat_command(context).wrap_err("Failed to parse chat command")?;
+    let result = command::parse_chat_command(context)
+        .await
+        .wrap_err("Failed to parse chat command")?;
 
     match result.response {
         Some(command::ActionResponse::Delete) => {
