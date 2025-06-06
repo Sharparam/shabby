@@ -107,22 +107,6 @@ pub async fn run() -> Result<LogState> {
 
     info!("Successfully connected and authorized");
 
-    // let mut log_chat: Option<Chat> = None;
-
-    // while let Some(dialog) = client.iter_dialogs().next().await? {
-    //     if dialog.chat().id() == me.id() {
-    //         log_chat = Some(dialog.chat().clone());
-    //         break;
-    //     }
-    // }
-
-    // if log_chat.is_none() {
-    //     error!("Could not find a suitable chat for feedback");
-    //     bail!("No suitable chat found for logging");
-    // }
-
-    // let log_chat = log_chat.unwrap();
-
     let bot = Bot {
         client: client.clone(),
         me,
@@ -193,16 +177,6 @@ async fn handle_command(context: &Context) -> Result<bool> {
     };
 
     Ok(result.quit)
-
-    // match command.action {
-    //     BotAction::Quit => {
-    //         info!("Received quit command");
-    //         if let Err(err) = message.delete().await {
-    //             warn!("Failed to delete quit command message: {}", err);
-    //         }
-    //         Ok(true)
-    //     }
-    // }
 }
 
 async fn handle_message(bot: &Bot, context: &Context) -> Result<bool> {
