@@ -42,6 +42,17 @@ pub async fn run() -> Result<LogState> {
         log_state.set_level_filter(config_log_level)?;
     }
     let session_path = config.session_filename();
+
+    if let Some(session_dir) = session_path.parent() {
+        if session_dir.to_string_lossy() != "" && !session_dir.exists() {
+            std::fs::create_dir_all(session_dir).wrap_err_with(|| {
+                format!(
+                    "Failed to create session directory: {}",
+                    session_dir.display()
+                )
+            })?;
+        }
+    }
     let session =
         Session::load_file_or_create(session_path).wrap_err("Failed to load or create session")?;
 
