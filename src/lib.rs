@@ -248,6 +248,11 @@ async fn handle_message(bot: &Bot, context: &Context) -> Result<bool> {
                     .await
                     .map(|_| false);
             }
+            "⚽" => {
+                return handle_dice(bot, context, dice, |v| v >= 3)
+                    .await
+                    .map(|_| false);
+            }
             em => {
                 warn!(
                     emoticon = em,
