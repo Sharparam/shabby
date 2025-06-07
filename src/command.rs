@@ -4,9 +4,10 @@ use grammers_client::InputMessage;
 
 use crate::Context;
 
-use self::case::CaseArgs;
+use self::{case::CaseArgs, dice::DiceArgs};
 
 mod case;
+mod dice;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -27,6 +28,8 @@ pub enum BotAction {
 
     #[command(alias = "c")]
     Case(CaseArgs),
+
+    Dice(DiceArgs),
 }
 
 pub enum ActionResponse {
@@ -94,6 +97,7 @@ pub async fn parse_chat_command(context: &Context) -> Result<ActionResult, BotCo
 
             args.handle(reply.as_deref())
         }
+        BotAction::Dice(args) => args.handle(),
     }
 }
 
