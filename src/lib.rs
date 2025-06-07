@@ -9,7 +9,7 @@ use grammers_client::{
     types::{Chat, Media, Message, User, media::Dice},
 };
 use tokio::signal;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use self::{cli::Cli, config::Config, logging::LogState};
 
@@ -190,29 +190,71 @@ async fn handle_command(context: &Context) -> Result<bool> {
     Ok(result.quit)
 }
 
+async fn handle_dice(
+    bot: &Bot,
+    context: &Context,
+    dice: &Dice,
+    predicate: fn(i32) -> bool,
+) -> Result<()> {
+    if predicate(dice.raw.value) {
+        return Ok(());
+    }
+
+    let message = &context.message;
+    let reply_to = message.reply_to_message_id();
+
+    message
+        .delete()
+        .await
+        .wrap_err("Failed to delete non-maxed dice")?;
+
+    let dice_media = Media::Dice(Dice {
+        raw: MessageMediaDice {
+            emoticon: dice.emoji().to_owned(),
+            value: 0,
+        },
+    });
+
+    let dice_msg = InputMessage::text("")
+        .reply_to(reply_to)
+        .copy_media(&dice_media)
+        .silent(true);
+
+    bot.client
+        .send_message(&context.chat, dice_msg)
+        .await
+        .wrap_err("Failed to send new dice media message")?;
+
+    Ok(())
+}
+
 async fn handle_message(bot: &Bot, context: &Context) -> Result<bool> {
     let message = &context.message;
 
     if let Some(Media::Dice(ref dice)) = message.media() {
-        if dice.raw.value != 6 {
-            let reply_to = message.reply_to_message_id();
-
-            message.delete().await?;
-
-            let dice_media = Media::Dice(Dice {
-                raw: MessageMediaDice {
-                    emoticon: "".to_string(),
-                    value: 0,
-                },
-            });
-
-            let dice_msg = InputMessage::text("")
-                .reply_to(reply_to)
-                .copy_media(&dice_media)
-                .silent(true);
-
-            bot.client.send_message(&context.chat, dice_msg).await?;
-            return Ok(false);
+        match dice.raw.emoticon.as_str() {
+            "🎲" => {
+                return handle_dice(bot, context, dice, |v| v == 6)
+                    .await
+                    .map(|_| false);
+            }
+            "🏀" => {
+                return handle_dice(bot, context, dice, |v| v >= 4)
+                    .await
+                    .map(|_| false);
+            }
+            "🎯" => {
+                return handle_dice(bot, context, dice, |v| v == 6)
+                    .await
+                    .map(|_| false);
+            }
+            em => {
+                warn!(
+                    emoticon = em,
+                    value = dice.raw.value,
+                    "Unhandled dice message"
+                );
+            }
         }
     }
 
